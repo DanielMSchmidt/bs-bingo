@@ -127,6 +127,7 @@ export default function Home({}: Route.ComponentProps) {
       <Typography level="h1">Bullshit Bingo</Typography>
       <Sheet sx={{ mt: 3, p: 2, minHeight: 300, backgroundColor: "#f8f8f8" }}>
         <Input
+          placeholder="Dein Begriff"
           ref={inputRef}
           value={currentWord}
           onChange={(e) => setCurrentWord(e.target.value)}
