@@ -1,4 +1,10 @@
-import { useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { Route } from "./+types/home";
 import {
   Box,
@@ -18,16 +24,49 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+function useLocalStorageState<T>(
+  key: string,
+  initialValue: T,
+): [T, Dispatch<SetStateAction<T>>] {
+  let init = initialValue;
+  if (typeof window !== "undefined") {
+    const prev = localStorage.getItem(key);
+    if (prev) {
+      init = JSON.parse(prev);
+    }
+  }
+
+  const [current, setCurrent] = useState<T>(init);
+
+  const setter = (updater: SetStateAction<T>) => {
+    setCurrent(updater);
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(key, JSON.stringify(current));
+    }
+  }, [key, current]);
+
+  return [current, setter];
+}
+
 const bingoWidth = 4;
 const bingoHeight = 4;
 export default function Home({}: Route.ComponentProps) {
   const inputRef = useRef<any>(null);
-  const [gameStarted, setGameStarted] = useState(false);
   const [currentWord, setCurrentWord] = useState("");
-  const [words, setWords] = useState([] as string[]);
-  const [wordMatrix, setWordMatrix] = useState([] as string[]);
+  const [gameStarted, setGameStarted] = useLocalStorageState("started", false);
+  const [words, setWords] = useLocalStorageState("words", [] as string[]);
+  const [wordMatrix, setWordMatrix] = useLocalStorageState(
+    "wordMatrix",
+    [] as string[],
+  );
   // The indexes that are marked
-  const [markedWords, setMarkedWords] = useState({} as Record<number, boolean>);
+  const [markedWords, setMarkedWords] = useLocalStorageState(
+    "markedWords",
+    {} as Record<number, boolean>,
+  );
 
   const addWord = () => {
     setWords((current) => [...current, currentWord]);
@@ -91,7 +130,14 @@ export default function Home({}: Route.ComponentProps) {
           ref={inputRef}
           value={currentWord}
           onChange={(e) => setCurrentWord(e.target.value)}
-          endDecorator={<Button onClick={addWord}>Hinzufügen</Button>}
+          endDecorator={
+            <Button
+              disabled={!currentWord || words.some((w) => w === currentWord)}
+              onClick={addWord}
+            >
+              Hinzufügen
+            </Button>
+          }
         />
 
         <List marker="disc" sx={{ marginTop: 3 }}>
@@ -101,11 +147,14 @@ export default function Home({}: Route.ComponentProps) {
         </List>
 
         <Button
+          sx={{ marginRight: 2 }}
           disabled={words.length < bingoHeight * bingoWidth}
           onClick={startGame}
         >
           Start
         </Button>
+
+        <Button onClick={() => setWords([])}>Zurücksetzen</Button>
       </Sheet>
     </Box>
   );
